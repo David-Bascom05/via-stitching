@@ -740,7 +740,7 @@ def test_translation_catalogs_cover_every_wrapped_string():
     import json
 
     wrapped = set()
-    for name in ("via_stitching_action.py", "_preview.py"):
+    for name in ("via_stitching_action.py", "_preview.py", "_net_search.py"):
         with open(os.path.join(os.path.dirname(_i18n.__file__), name), encoding="utf-8") as fh:
             tree = ast.parse(fh.read())
         wrapped |= {
