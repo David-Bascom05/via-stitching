@@ -54,6 +54,7 @@ from _win_dialog import make_tool_window  # noqa: E402
 from _kicad_config import kicad_config_dirs  # noqa: E402
 from _i18n import _  # noqa: E402
 from _preview import PreviewPanel  # noqa: E402
+from _net_search import NetSearch  # noqa: E402
 
 VERSION = "4.1.0"
 
@@ -1377,16 +1378,19 @@ class ViaStitchingDialog(wx.Dialog):
         self.y_offset.SetToolTip(offset_tip)
 
         names = list(net_names)
-        self.net = wx.ComboBox(self, choices=names, style=wx.CB_DROPDOWN)
         if sample_via:
-            self.net.SetValue(sample_via_net_name)
+            net_value = sample_via_net_name
         elif saved.get("net_name"):
-            self.net.SetValue(saved["net_name"])
+            net_value = saved["net_name"]
+        elif DEFAULT_NET in names:
+            net_value = DEFAULT_NET
         else:
-            if DEFAULT_NET in names:
-                self.net.SetValue(DEFAULT_NET)
-            elif names:
-                self.net.SetSelection(0)
+            net_value = names[0] if names else ""
+        # A text field with the matching nets listed under it, filtered as
+        # you type. self.net is the field, which values() reads.
+        self.net_search = NetSearch(self, names, net_value, _)
+        self.net = self.net_search.field
+        self.net_list = self.net_search.list
 
         # Not derived from a preselected via either way, so a saved run applies
         # regardless of sample_via.
@@ -1452,7 +1456,8 @@ class ViaStitchingDialog(wx.Dialog):
         self._refresh_remove_run_btn()
 
         self._make_group(self.main_sizer, [
-            (_("Net Name:"), self.net)
+            (_("Net Name:"), self.net),
+            ("", self.net_list),
         ])
 
         self._make_group(self.main_sizer, [
@@ -1694,8 +1699,8 @@ class ViaStitchingDialog(wx.Dialog):
         self.x_offset.SetValue(str(to_mm(0.0)))
         self.y_offset.SetValue(str(to_mm(0.0)))
 
-        net_choices = [self.net.GetString(i) for i in range(self.net.GetCount())]
-        self.net.SetValue(DEFAULT_NET if DEFAULT_NET in net_choices else "")
+        net_names = self.net_search.names
+        self.net_search.set_value(DEFAULT_NET if DEFAULT_NET in net_names else "")
 
         self.avoid_zones.SetValue(DEFAULT_AVOID_OTHER_ZONES)
         self.avoid_footprints.SetValue(DEFAULT_AVOID_FOOTPRINTS)
@@ -1814,7 +1819,7 @@ class ViaStitchingDialog(wx.Dialog):
         net_name = self.net.GetValue().strip()
         if not net_name:
             raise ValueError(_("Pick the net to stitch."))
-        net_name = _resolve_net_name(net_name, self.net.GetStrings())
+        net_name = _resolve_net_name(net_name, self.net_search.names)
 
         return {
             "via_type": via_type,

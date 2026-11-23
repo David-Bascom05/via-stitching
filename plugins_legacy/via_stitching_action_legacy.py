@@ -27,14 +27,16 @@ import wx
 import wx.adv
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-# _preview.py is shared with the IPC build. build.py packages it next to this
-# file; in a source checkout it is one directory over. Appended, not inserted,
-# so nothing in plugins/ can shadow a module of this build's own.
+# _preview.py and _net_search.py are shared with the IPC build. build.py
+# packages them next to this file; in a source checkout they are one directory
+# over. Appended, not inserted, so nothing in plugins/ can shadow a module of
+# this build's own.
 if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "_preview.py")):
     sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "plugins"))
 import _geometry_legacy as geo  # noqa: E402
 from _i18n_legacy import _  # noqa: E402
 from _preview import PreviewPanel  # noqa: E402
+from _net_search import NetSearch  # noqa: E402
 from _kicad_config_legacy import kicad_config_dirs  # noqa: E402
 
 VERSION = "1.4.0"
@@ -778,15 +780,19 @@ class ViaStitchingDialogLegacy(wx.Dialog):
         ))
 
         # --- Net ---
-        self.net = wx.ComboBox(self, choices=net_names, style=wx.CB_DROPDOWN)
         if sample_via:
-            self.net.SetValue(sample_via.GetNetname())
+            net_value = sample_via.GetNetname()
         elif saved.get("net_name"):
-            self.net.SetValue(saved["net_name"])
+            net_value = saved["net_name"]
         elif DEFAULT_NET in net_names:
-            self.net.SetValue(DEFAULT_NET)
-        elif net_names:
-            self.net.SetSelection(0)
+            net_value = DEFAULT_NET
+        else:
+            net_value = net_names[0] if net_names else ""
+        # A text field with the matching nets listed under it, filtered as
+        # you type. self.net is the field, which values() reads.
+        self.net_search = NetSearch(self, net_names, net_value, _)
+        self.net = self.net_search.field
+        self.net_list = self.net_search.list
 
         # --- Layout: matches the real IPC dialog's grouping and order
         # exactly (Net Name first, not last -- an earlier version of this
@@ -811,6 +817,7 @@ class ViaStitchingDialogLegacy(wx.Dialog):
 
         self._make_group(self.main_sizer, [
             (_("Net Name:"), self.net),
+            ("", self.net_list),
         ])
 
         self._make_group(self.main_sizer, [
@@ -1053,8 +1060,8 @@ class ViaStitchingDialogLegacy(wx.Dialog):
         self.pattern.SetSelection(PATTERNS.index(DEFAULT_PATTERN))
         self.x_offset.SetValue("0.0")
         self.y_offset.SetValue("0.0")
-        net_choices = [self.net.GetString(i) for i in range(self.net.GetCount())]
-        self.net.SetValue(DEFAULT_NET if DEFAULT_NET in net_choices else "")
+        net_names = self.net_search.names
+        self.net_search.set_value(DEFAULT_NET if DEFAULT_NET in net_names else "")
         self.avoid_zones.SetValue(DEFAULT_AVOID_OTHER_ZONES)
         self.avoid_footprints.SetValue(DEFAULT_AVOID_FOOTPRINTS)
         self.avoid_graphics.SetValue(DEFAULT_AVOID_GRAPHICS)
@@ -1107,7 +1114,7 @@ class ViaStitchingDialogLegacy(wx.Dialog):
         net_name = self.net.GetValue().strip()
         if not net_name:
             raise ValueError(_("Pick a net to stitch."))
-        net_name = _resolve_net_name(net_name, self.net.GetStrings())
+        net_name = _resolve_net_name(net_name, self.net_search.names)
 
         return dict(
             via_type=via_type, start_layer=start_layer, end_layer=end_layer, net_name=net_name,

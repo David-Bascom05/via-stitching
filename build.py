@@ -43,6 +43,7 @@ LAYOUTS = {
     "swig": {"plugins_legacy": "plugins", "plugins/locale": "plugins/locale",
              "plugins/icon.png": "plugins/icon.png",
              "plugins/_preview.py": "plugins/_preview.py",
+             "plugins/_net_search.py": "plugins/_net_search.py",
              "docs/icon.png": "resources/icon.png"},
 }
 # The package icon lives in docs/ with the README images, but the PCM only
