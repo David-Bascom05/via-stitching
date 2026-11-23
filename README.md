@@ -56,6 +56,11 @@ what you set last time. **Reset settings** puts the built-in defaults back.
 
 The settings that need explaining:
 
+- **Net Name:** type any part of a net's name, in any case, and the list
+  under it narrows to the matching nets as you type, best match first. A
+  short name finds a hierarchical net: `STACK+` finds
+  `/Battery Management/STACK+`. The highlighted net is the one OK will
+  stitch. Click a net, or use the arrow keys, to fill in its full name.
 - **Via Type:** Through, Micro, Blind, Buried, or Blind/Buried. The start and
   end layer are free for every type except Through, which is always F.Cu to
   B.Cu. An unusual pairing, such as a microvia that doesn't touch an outer
